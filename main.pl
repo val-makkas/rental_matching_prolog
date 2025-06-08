@@ -1,9 +1,8 @@
-% ΑΡΙΣΤΟΤΕΛΕΙΟ ΠΑΝΕΠΙΣΤΗΜΙΟ ΘΕΣΣΑΛΟΝΙΚΗΣ
-% ΤΜΗΜΑ ΠΛΗΡΟΦΟΡΙΚΗΣ - Εργαστήριο Ευφυών Συστημάτων
-% ΜΑΘΗΜΑ: Υπολογιστική Λογική & Λογικός Προγραμματισμός
-% 
-% Σύστημα Επιλογής Ενοικίασης Διαμερισμάτων
-% 
+% Prolong Rental Matching
+%
+% Χρυσοβαλάντης Μάκκας
+% ΑΕΜ = 4162 
+%
 % Δομή προγράμματος:
 % 1. Κύριο μενού και λειτουργίες εισόδου/εξόδου
 % 2. Διαδραστική λειτουργία για έναν πελάτη
@@ -16,6 +15,7 @@
 % ============================================================================
 
 % Αυτόματη φόρτωση των αρχείων houses.pl και requests.pl
+:- encoding(utf8).
 :- consult('houses.pl').
 :- consult('requests.pl').
 
@@ -34,7 +34,7 @@ show_menu :-
     write('2 - Μαζικές προτιμήσεις πελατών'), nl,
     write('3 - Επιλογή πελατών μέσω δημοπρασίας'), nl,
     write('0 - Έξοδος'), nl,
-    write('Επιλογή: ').
+    write('Επιλογή:').
 
 % Διαχείριση επιλογής χρήστη
 get_choice(Choice) :-
@@ -71,15 +71,15 @@ interactive_mode :-
     write('=============================='), nl,
     
     % Συλλογή απαιτήσεων από χρήστη
-    write('Ελάχιστο Εμβαδόν: |: '), read(MinArea),
-    write('Ελάχιστος αριθμός υπνοδωματίων: |: '), read(MinBedrooms),
-    write('Να επιτρέπονται κατοικίδια; (yes/no) |: '), read(PetsRequired),
-    write('Από ποιον όροφο και πάνω να υπάρχει ανελκυστήρας; |: '), read(ElevatorFloor),
-    write('Ποιο είναι το μέγιστο ενοίκιο που μπορείς να πληρώσεις; |: '), read(MaxRent),
-    write('Πόσα θα έδινες για ένα διαμέρισμα στο κέντρο της πόλης (στα ελάχιστα τετραγωνικά); |: '), read(CenterRent),
-    write('Πόσα θα έδινες για ένα διαμέρισμα στα προάστια της πόλης (στα ελάχιστα τετραγωνικά); |: '), read(SuburbRent),
-    write('Πόσα θα έδινες για κάθε τετραγωνικό διαμερίσματος πάνω από το ελάχιστο; |: '), read(ExtraAreaPrice),
-    write('Πόσα θα έδινες για κάθε τετραγωνικό κήπου; |: '), read(GardenPrice),
+    write('Ελάχιστο Εμβαδόν: '), read(MinArea),
+    write('Ελάχιστος αριθμός υπνοδωματίων: '), read(MinBedrooms),
+    write('Να επιτρέπονται κατοικίδια; (yes/no) '), read(PetsRequired),
+    write('Από ποιον όροφο και πάνω να υπάρχει ανελκυστήρας; '), read(ElevatorFloor),
+    write('Ποιο είναι το μέγιστο ενοίκιο που μπορείς να πληρώσεις; '), read(MaxRent),
+    write('Πόσα θα έδινες για ένα διαμέρισμα στο κέντρο της πόλης (στα ελάχιστα τετραγωνικά); '), read(CenterRent),
+    write('Πόσα θα έδινες για ένα διαμέρισμα στα προάστια της πόλης (στα ελάχιστα τετραγωνικά); '), read(SuburbRent),
+    write('Πόσα θα έδινες για κάθε τετραγωνικό διαμερίσματος πάνω από το ελάχιστο;'), read(ExtraAreaPrice),
+    write('Πόσα θα έδινες για κάθε τετραγωνικό κήπου; '), read(GardenPrice),
     nl,
     
     % Δημιουργία δομής απαιτήσεων
@@ -131,14 +131,19 @@ process_all_clients([Client|Rest]) :-
 % ============================================================================
 % ΛΕΙΤΟΥΡΓΙΑ ΔΗΜΟΠΡΑΣΙΑΣ (ΕΠΙΛΟΓΗ 3)
 % ============================================================================
+% Η δημοπρασία εκτελεί μια επαναληπτική διαδικασία εκχώρησης σπιτιών σε πελάτες,
+% προσπαθώντας να βρει το βέλτιστο ταίριασμα με βάση τις προσφορές και τις προτιμήσεις.
+% Επίσης επιλύει συγκρούσεις πελατών που "κερδίζουν" πάνω από ένα σπίτι.
 
 auction_mode :-
     % Εύρεση όλων των πελατών και των προτιμήσεών τους
     findall(Client, request(Client, _, _, _, _, _, _, _, _, _), Clients),
     
+    % ΒΗΜΑ 1: Βρες ποια σπίτια είναι κατάλληλα για κάθε πελάτη
     (   find_houses(Clients, ClientHousePairs) ->
-        % Εύρεση ανταγωνισμών και επίλυση δημοπρασιών
+        % ΒΗΜΑ 2: Βρες για κάθε σπίτι ποιοι πελάτες το διεκδικούν
         (   find_bidders(ClientHousePairs, Bidders) ->
+            % ΒΗΜΑ 3: Εκχώρησε σπίτια στους καλύτερους προσφέροντες
             (   refine_houses(Bidders, FinalAssignments) ->
                 % Εμφάνιση αποτελεσμάτων δημοπρασίας
                 display_auction_results(Clients, FinalAssignments)
@@ -242,7 +247,10 @@ sort_by_preference(Houses, SortedHouses) :-
     keysort(ScoredHouses, Sorted),
     findall(House, member(_-House, Sorted), SortedHouses).
 
-% Υπολογισμός σκορ προτίμησης (χαμηλότερο = καλύτερο)
+% Δημιουργεί μια βαθμολογία προτίμησης για κάθε σπίτι:
+% - Χαμηλότερο σκορ = καλύτερη επιλογή
+% - Βάση: ενοίκιο (βαρύτητα x1000), κήπος (αρνητική), εμβαδόν (αρνητική)
+
 calculate_preference_score(House, Score) :-
     house(House, _, Area, _, _, _, _, Garden, Rent),
     % Πρώτα ενοίκιο (x1000), μετά κήπος (-x10), μετά εμβαδόν (-x1)
@@ -307,11 +315,16 @@ can_afford_house(Client, House) :-
     house(House, _, _, _, _, _, _, _, ActualRent),
     Offer >= ActualRent.
 
-% ΣΩΣΤΗ ΥΛΟΠΟΙΗΣΗ ΔΗΜΟΠΡΑΣΙΑΣ ΣΥΜΦΩΝΑ ΜΕ ΤΗΝ ΕΚΦΩΝΗΣΗ
+% ============================================================================
+% ΕΠΙΛΥΣΗ ΔΗΜΟΠΡΑΣΙΑΣ ΚΑΙ ΑΝΑΘΕΣΗ ΣΠΙΤΙΩΝ
+% ============================================================================
+% Αρχικά βρίσκονται οι καλύτεροι "πλειοδότες" για κάθε σπίτι.
+% Αν κάποιος πελάτης έχει πάρει πάνω από ένα σπίτι, επιλέγεται το καλύτερο για αυτόν
+% και η διαδικασία επαναλαμβάνεται μέχρι κάθε πελάτης να έχει το πολύ ένα σπίτι.
+
 refine_houses(Bidders, FinalAssignments) :-
     find_best_bidders(Bidders, BestBidders),
     
-    % Extract only valid assignments (non-none)
     findall(House-Client, (member(House-Client, BestBidders), Client \= none), ValidAssignments),
     
     % Έλεγχος για συγκρούσεις (πελάτης με πολλά σπίτια)
@@ -321,13 +334,16 @@ refine_houses(Bidders, FinalAssignments) :-
     length(UniqueWinners, UniqueClients),
     
     (   TotalWins > UniqueClients ->  % Υπάρχουν συγκρούσεις
-        % Επίλυση συγκρούσεων με τη σωστή διαδικασία
+        % Επίλυση συγκρούσεων
         resolve_auction_conflicts(ValidAssignments, [], FinalAssignments)
     ;   % Δεν υπάρχουν συγκρούσεις
         FinalAssignments = ValidAssignments
     ).
 
-% Επίλυση συγκρούσεων δημοπρασίας με επαναληπτική διαδικασία
+% Επίλυση συγκρούσεων: πελάτες που έχουν εκχωρηθεί σε περισσότερα σπίτια
+% κρατούν μόνο το πιο προτιμητέο. Τα υπόλοιπα διατίθενται ξανά στους υπόλοιπους.
+% Η διαδικασία επαναλαμβάνεται αναδρομικά.
+
 resolve_auction_conflicts(ValidAssignments, AlreadyAssigned, FinalAssignments) :-
     % Βρες πελάτες που κερδίζουν πολλά σπίτια
     findall(Client-Houses, (
@@ -365,17 +381,17 @@ resolve_auction_conflicts(ValidAssignments, AlreadyAssigned, FinalAssignments) :
             can_afford_house(Client, House)
         ), NewBiddings),
         
-        % Δημιουργία νέων bidders για τα απελευθερωμένα σπίτια
+        % Δημιουργία νέων bidders για τα σπίτια
         findall(House-Clients, (
             member(House, ReleasedHouses),
             findall(Client, member(House-Client, NewBiddings), Clients)
         ), NewBidders),
         
-        % Εύρεση νέων νικητών για τα απελευθερωμένα σπίτια
+        % Εύρεση νέων νικητών για τα σπίτια
         find_best_bidders(NewBidders, NewWinners),
         findall(House-Client, (member(House-Client, NewWinners), Client \= none), AvailableForReassignment),
         
-        % Νέος γύρος για τα απελευθερωμένα σπίτια
+        % Νέος γύρος για τα ελευθερα σπίτια
         append(AlreadyAssigned, SelectedAssignments, NewAlreadyAssigned),
         resolve_auction_conflicts(AvailableForReassignment, NewAlreadyAssigned, FinalAssignments)
     ).
@@ -401,7 +417,7 @@ find_most_preferred_from_list([House|_], AvailableHouses, House) :-
     member(House, AvailableHouses), !.
 find_most_preferred_from_list([_|Rest], AvailableHouses, PreferredHouse) :-
     find_most_preferred_from_list(Rest, AvailableHouses, PreferredHouse).
-find_most_preferred_from_list([], [House|_], House) :- !.  % Fallback - πάρε το πρώτο διαθέσιμο
+find_most_preferred_from_list([], [House|_], House) :- !.  % πάρε το πρώτο διαθέσιμο
 find_most_preferred_from_list([], [], _) :- !, fail.    
 
 % ============================================================================
@@ -432,13 +448,13 @@ offer(req(MinArea, _, _, _, MaxRent, CenterRent, SuburbRent, ExtraAreaPrice, Gar
 % ΚΑΤΗΓΟΡΗΜΑΤΑ ΕΜΦΑΝΙΣΗΣ
 % ============================================================================
 
-% Εμφάνιση λίστας διαμερισμάτων
+% Εμφάνιση διαμερισμάτων
 display_houses([]).
 display_houses([House|Rest]) :-
     display_house_details(House),
     display_houses(Rest).
 
-% Εμφάνιση λεπτομερειών διαμερίσματος
+% Εμφάνιση διαμερίσματος
 display_house_details(Address) :-
     house(Address, Bedrooms, Area, InCenter, Floor, Elevator, Pets, Garden, Rent),
     write('Κατάλληλο σπίτι στην διεύθυνση: '), write(Address), nl,
@@ -455,7 +471,6 @@ display_house_details(Address) :-
 % Εμφάνιση αποτελεσμάτων δημοπρασίας
 display_auction_results([], _).
 display_auction_results([Client|Rest], Assignments) :-
-    % Find only the first assignment for each client (remove duplicates)
     (   member(House-Client, Assignments) ->
         write('O πελάτης '), write(Client), write(' θα νοικιάσει το διαμέρισμα στην διεύθυνση: '), write(House), nl
     ;   write('O πελάτης '), write(Client), write(' δεν θα νοικιάσει κάποιο διαμέρισμα!'), nl
